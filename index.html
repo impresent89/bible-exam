@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>주관식 암송 테스트 v7</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f6f8;color:#202124;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:20px}
+h1{font-size:24px;margin:0 0 6px}
+.sub{color:#666;font-size:14px;margin-bottom:20px}
+.card{background:#fff;border:1px solid #ddd;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+h2{font-size:18px;margin:0 0 12px}
+textarea{width:100%;min-height:250px;padding:14px;border:1px solid #ccc;border-radius:10px;font:15px/1.7 inherit;resize:vertical}
+button{border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:700;cursor:pointer;background:#222;color:#fff}
+button.secondary{background:#e9eaed;color:#222}
+button.danger{background:#fff0f0;color:#b42318}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.note{font-size:13px;color:#666;line-height:1.6}
+.status{margin-top:10px;font-size:14px;color:#555;white-space:pre-wrap}
+.token-area{line-height:2.4;font-size:17px;border:1px solid #ddd;border-radius:10px;padding:14px;background:#fafafa}
+.token{display:inline-block;padding:1px 4px;margin:1px;border-radius:5px;cursor:pointer}
+.token:hover{background:#e9eaed}
+.token.selected{background:#222;color:#fff}
+.token.blank{background:#e8f5e9;color:#167c3a;border-bottom:2px solid #167c3a}
+.quiz-text{font-size:17px;line-height:2.4;white-space:pre-wrap}
+.quiz-input{width:210px;max-width:65vw;min-height:48px;padding:9px 12px;border:2px solid #aaa;border-radius:9px;font-size:18px;background:#fff;color:#202124;-webkit-appearance:none;touch-action:manipulation}.quiz-input:focus{outline:none;border-color:#222;box-shadow:0 0 0 3px rgba(34,34,34,.08)}.pdf-short-input{width:min(100%,520px);max-width:100%}.pdf-short-input{width:min(100%,520px);max-width:100%}
+.result{font-size:18px;font-weight:700;margin-top:14px}
+.good{color:#167c3a}.bad{color:#c62828}
+.small{font-size:12px;color:#777}
+.hidden{display:none}
+.answer-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.answer-item{display:flex;gap:8px;align-items:center}
+.answer-item b{width:32px;text-align:center}
+.answer-item input{flex:1;padding:9px;border:1px solid #ccc;border-radius:7px}
+@media(max-width:650px){
+ .wrap{padding:12px}.card{padding:14px}.answer-list{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>주관식 암송 테스트</h1>
+<div class="sub">문제 입력 → 문제 만들기 → 시험 → 채점 · PDF 문답지 추출 기능 추가</div><div class="note" style="margin-bottom:12px">※ 기본 암송 테스트는 로컬에서 실행됩니다. PDF 읽기 기능은 PDF.js 라이브러리를 불러오기 위해 인터넷 연결이 필요합니다. 기기에 저장한 뒤 HTML 실행을 지원하는 브라우저 또는 로컬 HTML 실행 앱에서 여세요. ChatGPT 미리보기에서는 버튼이 동작하지 않을 수 있습니다.</div>
+
+<section class="card">
+<h2>1. 문제 입력</h2>
+<p class="note">
+정답이 포함된 문제를 그대로 붙여넣으세요.<br>
+예: <b>(① 일곱째 천사)</b>처럼 ①~⑳ 번호와 정답이 있으면 자동으로 인식합니다.
+</p>
+<textarea id="source" placeholder="문제 문장을 여기에 붙여넣으세요."></textarea>
+<div class="row">
+<button id="autoBtn">문제 만들기</button>
+<button id="clearBtn" class="secondary">초기화</button>
+</div>
+<div id="status" class="status"></div>
+</section>
+
+
+<section class="card" id="pdfCard">
+<h2>PDF 문답지에서 문제·정답 추출</h2>
+<p class="note">PDF에서 정답을 먼저 별도로 보관한 뒤, 정답이 보이지 않는 시험지를 만듭니다. 시험이 끝나면 보관한 정답 기준으로 채점합니다. 텍스트형 PDF를 지원하며 암호가 있는 PDF는 암호를 입력할 수 있습니다.</p>
+<input id="pdfFile" type="file" accept="application/pdf,.pdf">
+<div class="row"><button id="pdfExtractBtn">PDF 읽고 정답 추출</button></div>
+<div id="pdfAnswerStatus" class="status"></div>
+<div id="pdfStatus" class="status"></div>
+<textarea id="pdfPreview" class="hidden" style="min-height:300px" placeholder="정답을 제거한 문제 미리보기"></textarea>
+<div class="row" id="pdfActions" style="display:none">
+<button id="pdfStartQuizBtn">정답 숨기고 PDF 시험 시작</button>
+<button id="pdfCopyBtn" class="secondary">문제 내용을 기존 입력칸으로 복사</button>
+<button id="pdfDownloadBtn" class="secondary">문제 텍스트 다운로드</button>
+</div>
+<p class="note">정답은 화면에 표시하지 않고 메모리에 보관해 채점에 사용합니다. 스캔 이미지 PDF는 아직 지원하지 않습니다.</p>
+</section>
+
+<section id="editCard" class="card hidden">
+<h2>2. 문제 확인</h2>
+<p class="note">초록색 부분이 정답으로 인식된 구멍입니다. 필요하면 아래 정답을 직접 수정할 수 있습니다.</p>
+<div id="previewText" class="token-area"></div>
+<div id="answers" class="answer-list"></div>
+<div class="row">
+<button id="makeBtn">시험 시작하기</button>
+<button id="manualBtn" class="secondary">수동으로 구멍 지정</button>
+</div>
+</section>
+
+<section id="manualCard" class="card hidden">
+<h2>수동 구멍 지정</h2>
+<p class="note">단어를 눌러 선택하세요. 최대 20개까지 선택할 수 있습니다. 선택한 원문이 정답으로 저장됩니다.</p>
+<div id="manualText" class="token-area"></div>
+<div id="manualStatus" class="status"></div>
+<div class="row">
+<button id="manualMakeBtn">선택한 구멍으로 시험 만들기</button>
+</div>
+</section>
+
+<section id="quizCard" class="card hidden">
+<h2>3. 시험</h2>
+<p class="note">키보드로 입력하거나, 태블릿의 펜 손글씨 입력 기능을 사용하세요. 시험 중에는 정답이 표시되지 않습니다.</p>
+<div id="quizText" class="quiz-text"></div>
+<div class="row">
+<button id="gradeBtn">채점하기</button>
+<button id="editBackBtn" class="secondary">문제 수정</button>
+</div>
+<div id="result" class="result"></div>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const marks=["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
+let sourceText="";
+let answers=Array(20).fill("");
+let autoBlankMap=[];
+let manualTokens=[];
+let manualSelected=[];
+let quizAnswers=[];
+let pdfAnswerKey=[];
+let pdfQuizItems=[];
+
+const $=id=>document.getElementById(id);
+
+function escapeHtml(s){
+ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function escapeRegExp(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function norm(s){return String(s).replace(/\s+/g,"").trim();}
+
+function extractNumberedAnswers(text){
+ const out=Array(20).fill("");
+ for(let i=0;i<20;i++){
+   const mark=marks[i];
+   // Most source sheets use: (① answer)
+   const re=new RegExp("\\(\\s*"+escapeRegExp(mark)+"\\s*([^()\\n]{1,100}?)\\s*\\)");
+   const m=text.match(re);
+   if(m) out[i]=m[1].trim();
+ }
+ return out;
+}
+
+function buildAutoPreview(){
+ let html=escapeHtml(sourceText);
+ autoBlankMap=[];
+ for(let i=0;i<20;i++){
+   if(!answers[i]) continue;
+   // 원문에 괄호 안 공백이 있거나 정답 앞뒤 공백이 있어도 번호 기준으로 찾습니다.
+   const re=new RegExp("\\(\\s*"+escapeRegExp(marks[i])+"\\s*[^()\\n]{1,100}?\\s*\\)");
+   const replacement=`(<span class="token blank" data-auto="${i}">${marks[i]} ________</span>)`;
+   html=html.replace(re,replacement);
+ }
+ $("previewText").innerHTML=html;
+}
+
+function renderAnswers(){
+ $("answers").innerHTML=answers.map((a,i)=>`
+  <div class="answer-item">
+    <b>${marks[i]}</b>
+    <input data-answer="${i}" value="${escapeHtml(a)}" placeholder="정답 ${marks[i]}">
+  </div>`).join("");
+}
+
+function readAnswerEdits(){
+ document.querySelectorAll("[data-answer]").forEach(el=>{
+   answers[Number(el.dataset.answer)]=el.value.trim();
+ });
+}
+
+function autoCreate(){
+ sourceText=$("source").value.trim();
+ if(!sourceText){
+   $("status").textContent="문제를 먼저 붙여넣어 주세요.";
+   return;
+ }
+ answers=extractNumberedAnswers(sourceText);
+ const count=answers.filter(Boolean).length;
+ buildAutoPreview();
+ renderAnswers();
+ $("editCard").classList.remove("hidden");
+ $("manualCard").classList.add("hidden");
+ $("status").textContent=`${count}개의 번호가 인식되었습니다.`;
+ if(count===0){
+   $("status").textContent="①~⑳을 찾지 못했습니다. 예: (① 일곱째 천사) 형식인지 확인해 주세요.";
+ }
+ window.scrollTo({top:$("editCard").offsetTop-10,behavior:"smooth"});
+}
+
+function buildQuiz(){
+ readAnswerEdits();
+ if(!answers.some(Boolean)){
+   alert("정답이 하나 이상 필요합니다.");
+   return;
+ }
+ let html=escapeHtml(sourceText);
+ quizAnswers=[];
+ for(let i=0;i<20;i++){
+   if(!answers[i]) continue;
+   // 편집한 정답 문구와 원문이 완전히 일치하지 않아도 번호가 있는 괄호를 빈칸으로 바꿉니다.
+   const re=new RegExp("\\(\\s*"+escapeRegExp(marks[i])+"\\s*[^()\\n]{1,100}?\\s*\\)");
+   quizAnswers.push(i);
+   html=html.replace(re,`(${marks[i]} <input class="quiz-input" data-answer-index="${i}" placeholder="키보드 또는 Pencil로 입력" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">)`);
+ }
+ $("quizText").innerHTML=html;
+ $("quizCard").classList.remove("hidden");
+ $("result").textContent="";
+ window.scrollTo({top:$("quizCard").offsetTop-10,behavior:"smooth"});
+}
+
+function tokenize(text){
+ // Whitespace-based tokens, preserving whitespace.
+ const parts=text.split(/(\s+)/);
+ return parts.map((v,i)=>({v,space:/^\s+$/.test(v),id:i}));
+}
+
+function renderManual(){
+ $("manualText").innerHTML="";
+ manualTokens=tokenize(sourceText);
+ manualTokens.forEach(t=>{
+   if(t.space){
+     $("manualText").appendChild(document.createTextNode(t.v));
+   }else{
+     const span=document.createElement("span");
+     span.className="token"+(manualSelected.includes(t.id)?" selected":"");
+     span.textContent=t.v;
+     span.dataset.id=t.id;
+     span.addEventListener("click",()=>{
+       const id=Number(span.dataset.id);
+       if(manualSelected.includes(id)) manualSelected=manualSelected.filter(x=>x!==id);
+       else if(manualSelected.length<20) manualSelected.push(id);
+       renderManual();
+       $("manualStatus").textContent=`선택 ${manualSelected.length}/20`;
+     });
+     $("manualText").appendChild(span);
+   }
+ });
+ $("manualStatus").textContent=`선택 ${manualSelected.length}/20`;
+ $("manualCard").classList.remove("hidden");
+}
+
+function makeManualQuiz(){
+ if(!manualSelected.length){alert("구멍으로 만들 단어를 선택해 주세요.");return;}
+ const selected=manualTokens.filter(t=>manualSelected.includes(t.id));
+ let html=escapeHtml(sourceText);
+ // Replace from right to left so positions don't shift.
+ selected.sort((a,b)=>b.id-a.id).forEach((t,idx)=>{
+   const key=manualSelected.indexOf(t.id);
+   const answer=t.v;
+   const re=new RegExp("(?<![\\p{L}\\p{N}])"+escapeRegExp(answer)+"(?![\\p{L}\\p{N}])","u");
+   // Safer for duplicate words: build through token sequence instead below.
+ });
+ let result="";
+ manualTokens.forEach(t=>{
+   if(t.space){result+=escapeHtml(t.v);return;}
+   if(manualSelected.includes(t.id)){
+     const answer=t.v;
+     const order=manualSelected.indexOf(t.id);
+     result+=`<input class="quiz-input" data-manual-answer="${escapeHtml(answer)}" placeholder="키보드 또는 Pencil로 입력" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">`;
+   }else result+=escapeHtml(t.v);
+ });
+ $("quizText").innerHTML=result;
+ $("quizCard").classList.remove("hidden");
+ $("result").textContent="";
+ window.scrollTo({top:$("quizCard").offsetTop-10,behavior:"smooth"});
+}
+
+function scrollToCard(id){
+  const el=$(id);
+  if(el) el.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("autoBtn").onclick = function(){ autoCreate(); };
+
+$("clearBtn").onclick = function(){
+  $("source").value="";
+  $("status").textContent="";
+  $("editCard").classList.add("hidden");
+  $("manualCard").classList.add("hidden");
+  $("quizCard").classList.add("hidden");
+  answers=Array(20).fill("");
+  sourceText="";
+};
+
+$("makeBtn").onclick = function(){ buildQuiz(); };
+
+$("manualBtn").onclick = function(){
+  sourceText=$("source").value.trim();
+  if(!sourceText){
+    $("status").textContent="문제를 먼저 입력하세요.";
+    return;
+  }
+  manualSelected=[];
+  renderManual();
+  scrollToCard("manualCard");
+};
+
+$("manualMakeBtn").onclick = function(){ makeManualQuiz(); };
+
+$("gradeBtn").onclick = function(){
+  let total=0,score=0;
+  document.querySelectorAll("#quizText .quiz-input").forEach(function(input){
+    total++;
+    let answer="";
+    if(input.dataset.answerIndex!==undefined){
+      answer=answers[Number(input.dataset.answerIndex)] || "";
+    }else if(input.dataset.pdfAnswerId){
+      const pdfItem=pdfAnswerKey.find(item=>item.id===input.dataset.pdfAnswerId);
+      answer=pdfItem ? pdfItem.answer : "";
+    }else{
+      answer=input.dataset.manualAnswer || "";
+    }
+    const ok=norm(input.value)===norm(answer);
+    input.style.borderColor=ok ? "#167c3a" : "#c62828";
+    if(ok) score++;
+  });
+  $("result").textContent=score+" / "+total+" 정답 (공백 차이는 무시)";
+};
+
+$("editBackBtn").onclick = function(){
+  $("quizCard").classList.add("hidden");
+  scrollToCard("editCard");
+};
+
+// PDF text extraction and answer-key retention.
+// The answer key remains in memory only; it is not shown during the test.
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+function pdfNorm(s){ return String(s||"").replace(/\s+/g,"").trim(); }
+
+function parsePdfQuestionAndAnswers(raw){
+  const lines=raw.split(/\r?\n/);
+  const answersByBlank=new Map();
+  const shortAnswers=[];
+  let cleanedLines=[];
+  let currentQuestion=null;
+
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    const answerLine=line.match(/^\s*답\s*[>＞:：]\s*(.*?)\s*$/);
+    if(answerLine){
+      const answer=answerLine[1].trim();
+      if(currentQuestion && answer){
+        shortAnswers.push({
+          id:"short-"+currentQuestion.number,
+          questionNumber:currentQuestion.number,
+          answer,
+          question:currentQuestion.text
+        });
+      }
+      // Remove answer line from student-facing content.
+      currentQuestion=null;
+      continue;
+    }
+
+    const qmatch=line.match(/^\s*(\d{1,3})\.\s+(.+)$/);
+    if(qmatch) currentQuestion={number:Number(qmatch[1]),text:qmatch[2].trim()};
+
+    // Pull answers out of inline numbered parentheses, including multi-digit labels.
+    const inlineRe=/\(\s*(\d{1,3})\s+([^()\n]{1,220}?)\s*\)/g;
+    let m;
+    while((m=inlineRe.exec(line))!==null){
+      const n=Number(m[1]), answer=m[2].trim();
+      if(answer) answersByBlank.set(n,answer);
+    }
+
+    // Keep the original line for layout; replace each answer-bearing parentheses with a blank marker.
+    cleanedLines.push(line.replace(inlineRe,(_all,n)=>`(${n} ________)`));
+  }
+
+  // Build student test lines from cleaned lines, inserting a short-answer input where each removed
+  // "답>" line appeared. We preserve question numbering and avoid revealing the answer.
+  const testLines=[];
+  currentQuestion=null;
+  let shortIndex=0;
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    const qmatch=line.match(/^\s*(\d{1,3})\.\s+(.+)$/);
+    if(qmatch) currentQuestion={number:Number(qmatch[1]),text:qmatch[2].trim()};
+
+    if(/^\s*답\s*[>＞:：]/.test(line)){
+      const entry=shortAnswers[shortIndex++];
+      if(entry){
+        testLines.push(`답: ⟦SHORT:${entry.id}⟧`);
+      }
+      currentQuestion=null;
+      continue;
+    }
+    testLines.push(line.replace(/\(\s*(\d{1,3})\s+([^()\n]{1,220}?)\s*\)/g,(_all,n)=>`(⟦BLANK:${n}⟧)`));
+  }
+
+  const blankItems=[...answersByBlank.entries()].sort((a,b)=>a[0]-b[0]).map(([n,answer])=>({
+    id:"blank-"+n, type:"blank", number:n, answer
+  }));
+  const shortItems=shortAnswers.map(x=>({id:x.id,type:"short",number:x.questionNumber,answer:x.answer}));
+  return {
+    answers:[...blankItems,...shortItems],
+    testText:testLines.join("\n").replace(/\n{3,}/g,"\n\n").trim(),
+    previewText:cleanedLines.join("\n").replace(/\n{3,}/g,"\n\n").trim(),
+    blankCount:blankItems.length,
+    shortCount:shortItems.length
+  };
+}
+
+async function extractPdfText(file, password){
+  if(!window.pdfjsLib) throw new Error("PDF 읽기 기능을 불러오지 못했습니다. PDF 추출은 인터넷 연결 후 다시 시도해 주세요.");
+  const data = new Uint8Array(await file.arrayBuffer());
+  const task = pdfjsLib.getDocument({data, password: password || undefined});
+  const pdf = await task.promise;
+  const pages=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const rows=new Map();
+    content.items.forEach(item=>{
+      if(!item.str || !item.str.trim()) return;
+      const y=Math.round(item.transform[5]);
+      if(!rows.has(y)) rows.set(y,[]);
+      rows.get(y).push({x:item.transform[4],str:item.str});
+    });
+    const lines=[...rows.entries()].sort((a,b)=>b[0]-a[0]).map(([y,items])=>
+      items.sort((a,b)=>a.x-b.x).map(v=>v.str).join(" ").replace(/[ \t]+/g," ").trim()
+    ).filter(Boolean);
+    pages.push(lines.join("\n"));
+  }
+  return pages.join("\n\n");
+}
+
+function renderPdfTest(text){
+  const answerMap=new Map(pdfAnswerKey.map(a=>[a.id,a]));
+  let html=escapeHtml(text);
+  html=html.replace(/⟦BLANK:(\d+)⟧/g,(_m,n)=>{
+    const id="blank-"+n;
+    if(!answerMap.has(id)) return `(${n} ________)`;
+    return `(${n} <input class="quiz-input" data-pdf-answer-id="${id}" placeholder="정답 입력" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">)`;
+  });
+  html=html.replace(/⟦SHORT:(short-\d+)⟧/g,(_m,id)=>{
+    if(!answerMap.has(id)) return "________";
+    return `<input class="quiz-input pdf-short-input" data-pdf-answer-id="${id}" placeholder="정답 입력" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">`;
+  });
+  $("quizText").innerHTML=html;
+  $("quizCard").classList.remove("hidden");
+  $("editCard").classList.add("hidden");
+  $("manualCard").classList.add("hidden");
+  $("result").textContent="";
+  scrollToCard("quizCard");
+}
+$("pdfExtractBtn").onclick=async function(){
+  const file=$("pdfFile").files[0];
+  if(!file){$("pdfStatus").textContent="먼저 PDF 파일을 선택해 주세요.";return;}
+  $("pdfExtractBtn").disabled=true;
+  $("pdfStatus").textContent="PDF를 읽고 정답을 분리하는 중입니다...";
+  $("pdfAnswerStatus").textContent="";
+  try{
+    let raw;
+    try{ raw=await extractPdfText(file,""); }
+    catch(e){
+      if(e && (e.name==="PasswordException" || e.code===1)){
+        const password=prompt("PDF 열기 암호를 입력해 주세요.") || "";
+        if(!password) throw new Error("암호 입력이 취소되었습니다.");
+        raw=await extractPdfText(file,password);
+      } else throw e;
+    }
+    if(!raw.trim()) throw new Error("PDF에서 텍스트를 찾지 못했습니다. 스캔 이미지 PDF일 수 있습니다.");
+    const parsed=parsePdfQuestionAndAnswers(raw);
+    pdfAnswerKey=parsed.answers;
+    pdfQuizItems=parsed.testText;
+    $("pdfPreview").value=parsed.previewText;
+    $("pdfPreview").classList.remove("hidden");
+    $("pdfActions").style.display="flex";
+    $("pdfStatus").textContent=`${file.name} 읽기 완료. 정답이 제거된 문제 미리보기를 만들었습니다.`;
+    $("pdfAnswerStatus").textContent=`정답 보관 완료: 빈칸 정답 ${parsed.blankCount}개 · 별도 답안 ${parsed.shortCount}개. 정답은 시험 화면에 표시하지 않고 채점에 사용합니다.`;
+  }catch(e){
+    pdfAnswerKey=[];
+    pdfQuizItems=[];
+    $("pdfStatus").textContent="PDF 읽기에 실패했습니다: "+(e.message || "알 수 없는 오류");
+  }finally{$("pdfExtractBtn").disabled=false;}
+};
+$("pdfStartQuizBtn").onclick=function(){
+  if(!pdfAnswerKey.length || !pdfQuizItems){
+    $("pdfStatus").textContent="먼저 PDF를 읽고 정답을 추출해 주세요.";
+    return;
+  }
+  renderPdfTest(pdfQuizItems);
+};
+$("pdfCopyBtn").onclick=function(){
+  $("source").value=$("pdfPreview").value;
+  $("status").textContent="PDF에서 추출한 문제를 입력란으로 복사했습니다. PDF의 정답 키는 별도로 보관되어 있으며 기존 일반 시험에는 자동 연결되지 않습니다.";
+  scrollToCard("source");
+};
+$("pdfDownloadBtn").onclick=function(){
+  const blob=new Blob([$("pdfPreview").value],{type:"text/plain;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="정답제거_문제.txt";a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
+
+</script>
+</body>
+</html>
