@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>주관식 암송 테스트 v7</title>
+<title>인맞음 시험 테스트</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f5f6f8;color:#202124;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
@@ -41,8 +41,8 @@ button.danger{background:#fff0f0;color:#b42318}
 </head>
 <body>
 <div class="wrap">
-<h1>주관식 암송 테스트</h1>
-<div class="sub">문제 입력 → 문제 만들기 → 시험 → 채점 · PDF 문답지 추출 기능 추가</div><div class="note" style="margin-bottom:12px">※ 기본 암송 테스트는 로컬에서 실행됩니다. PDF 읽기 기능은 PDF.js 라이브러리를 불러오기 위해 인터넷 연결이 필요합니다. 기기에 저장한 뒤 HTML 실행을 지원하는 브라우저 또는 로컬 HTML 실행 앱에서 여세요. ChatGPT 미리보기에서는 버튼이 동작하지 않을 수 있습니다.</div>
+<h1>인맞음 시험 테스트</h1>
+<div class="note" style="margin-bottom:12px">PDF 읽기 기능은 인터넷 연결이 필요합니다.</div>
 
 <section class="card">
 <h2>1. 문제 입력</h2>
@@ -60,7 +60,7 @@ button.danger{background:#fff0f0;color:#b42318}
 
 
 <section class="card" id="pdfCard">
-<h2>PDF 문답지에서 문제·정답 추출</h2>
+<h2>2. PDF 문답지에서 문제·정답 추출</h2>
 <p class="note">PDF에서 정답을 먼저 별도로 보관한 뒤, 정답이 보이지 않는 시험지를 만듭니다. 시험이 끝나면 보관한 정답 기준으로 채점합니다. 텍스트형 PDF를 지원하며 암호가 있는 PDF는 암호를 입력할 수 있습니다.</p>
 <input id="pdfFile" type="file" accept="application/pdf,.pdf">
 <div class="row"><button id="pdfExtractBtn">PDF 읽고 정답 추출</button></div>
@@ -69,7 +69,7 @@ button.danger{background:#fff0f0;color:#b42318}
 <textarea id="pdfPreview" class="hidden" style="min-height:300px" placeholder="정답을 제거한 문제 미리보기"></textarea>
 <div class="row" id="pdfActions" style="display:none">
 <button id="pdfStartQuizBtn">정답 숨기고 PDF 시험 시작</button>
-<button id="pdfCopyBtn" class="secondary">문제 내용을 기존 입력칸으로 복사</button>
+<button id="pdfCopyBtn" class="secondary" hidden>문제 내용을 기존 입력칸으로 복사</button>
 <button id="pdfDownloadBtn" class="secondary">문제 텍스트 다운로드</button>
 </div>
 <p class="note">정답은 화면에 표시하지 않고 메모리에 보관해 채점에 사용합니다. 스캔 이미지 PDF는 아직 지원하지 않습니다.</p>
